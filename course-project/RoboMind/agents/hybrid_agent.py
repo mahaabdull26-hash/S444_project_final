@@ -50,6 +50,11 @@ class HybridAgent:
             return True
         # Check if it's an obstacle
         return self.env.grid[row][col] == 1
+
+
+      # ------------------------------------------------------------------
+    # Perception + simple logical facts
+  # ------------------------------------------------------------------
     
     def perceive(self):
         """
@@ -106,15 +111,20 @@ class HybridAgent:
                         free_count += 1
         
         if explored_count == 0:
+            # If we know nothing, return a neutral value
             return 0.5  # Unknown
         
         return free_count / explored_count
+
+      # ------------------------------------------------------------------
+    # Search-based planning
+       # ------------------------------------------------------------------
     
     def plan(self):
         """
         Use search algorithms to plan path to goal.
         """
-        # Try A* search first
+       # Try A* with Manhattan heuristic
         path, cost, expanded = self.search_agent.search('astar', 'manhattan')
         
         if path:
@@ -123,6 +133,10 @@ class HybridAgent:
         else:
             print("Search failed to find path")
             return None
+
+     # ------------------------------------------------------------------
+    # Logical reasoning about which strategy to use
+      # ------------------------------------------------------------------
     
     def reason(self):
         """
@@ -156,10 +170,10 @@ class HybridAgent:
         for neighbor in neighbors:
             if neighbor not in self.beliefs:
                 # Initialize with prior
-                self.beliefs[neighbor] = 0.3
+            self.beliefs[neighbor] = 0.3
             
             # Simulate sensor reading (90% accurate)
-            actual_free = self.is_free(neighbor)
+         actual_free = self.is_free(neighbor)
             sensor_accuracy = 0.9
             
             # Generate reading
@@ -169,17 +183,17 @@ class HybridAgent:
             else:
                 reading = actual_free  # Incorrect reading
             
-            # Update belief using Bayes
+         # Update belief using Bayes
             prior = self.beliefs[neighbor]
             
-            if reading:  # Sensor says "obstacle"
+     if reading:  # Sensor says "obstacle"
                 likelihood = sensor_accuracy
             else:  # Sensor says "free"
                 likelihood = 1 - sensor_accuracy
             
             # Simple update (normalized)
             evidence = (likelihood * prior) + ((1 - likelihood) * (1 - prior))
-            if evidence > 0:
+         if evidence > 0:
                 posterior = (likelihood * prior) / evidence
                 self.beliefs[neighbor] = posterior
     
@@ -187,16 +201,16 @@ class HybridAgent:
         """
         Integrate all reasoning techniques to decide next action.
         """
-        # Perceive environment
+     # Perceive environment
         self.perceive()
         
-        # Reason about strategy
+         # Reason about strategy
         self.reason()
         
-        # Update probabilistic beliefs
+     # Update probabilistic beliefs
         self.update_beliefs()
         
-        # Execute based on strategy
+ # act based on chosen strategy
         if self.strategy == "search":
             # Try to use search
             path = self.plan()
@@ -241,8 +255,8 @@ class HybridAgent:
                 self.current_pos = best_move
                 self.env.agent_pos = best_move
                 return True
-        
-        # Fallback: random move
+
+          # 5) fallback strategy: if everything else failed  just move to any free neighbor
         neighbors = self.env.get_neighbors(self.current_pos)
         for neighbor in neighbors:
             if self.is_free(neighbor):
@@ -250,7 +264,8 @@ class HybridAgent:
                 self.current_pos = neighbor
                 self.env.agent_pos = neighbor
                 return True
-        
+
+        # If we reach this point, there are no valid moves at all
         print("Hybrid Agent: No valid moves!")
         return False
 
